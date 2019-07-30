@@ -1,8 +1,11 @@
 import tcod
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def main():
-    pass
+    logger.info("Game start.")
 
 
 if __name__ == '__main__':
