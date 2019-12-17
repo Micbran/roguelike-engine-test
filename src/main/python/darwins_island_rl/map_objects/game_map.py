@@ -1,4 +1,4 @@
-from src.main.python.darwins_island_rl.map_objects.tile import Tile
+from map_objects.tile import Tile
 
 
 class GameMap:
@@ -10,12 +10,14 @@ class GameMap:
     def init_tiles(self):
         tiles = [[Tile(False) for y in range(self.height)] for x in range(self.width)]
 
+        # PREDEF
         tiles[30][22].move_block = True
         tiles[30][22].sight_block = True
         tiles[31][22].move_block = True
         tiles[31][22].sight_block = True
         tiles[32][22].move_block = True
         tiles[32][22].sight_block = True
+        # ENDPREDEF
 
         return tiles
 

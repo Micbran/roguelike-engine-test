@@ -1,36 +1,37 @@
 import tcod
-from tcod import event as event
+from tcod import event
 
-def handle_event(event):
-    if event.type == "QUIT":
+
+def handle_event(game_event):
+    if game_event.type == "QUIT":
         raise SystemExit()
-    elif event.type == "KEYDOWN":
-        return handle_keypress(event)
+    elif game_event.type == "KEYDOWN":
+        return handle_keypress(game_event)
 
     return {}
 
 
-def handle_keypress(event):
-    if event.sym == tcod.event.K_KP_6:
+def handle_keypress(game_event):
+    if game_event.sym == tcod.event.K_KP_6:
         return {'move': (1, 0)}
-    elif event.sym == tcod.event.K_KP_4:
+    elif game_event.sym == tcod.event.K_KP_4:
         return {'move': (-1, 0)}
-    elif event.sym == tcod.event.K_KP_2:
+    elif game_event.sym == tcod.event.K_KP_2:
         return {'move': (0, 1)}
-    elif event.sym == tcod.event.K_KP_8:
+    elif game_event.sym == tcod.event.K_KP_8:
         return {'move': (0, -1)}
-    elif event.sym == tcod.event.K_KP_3:
+    elif game_event.sym == tcod.event.K_KP_3:
         return {'move': (1, 1)}
-    elif event.sym == tcod.event.K_KP_1:
+    elif game_event.sym == tcod.event.K_KP_1:
         return {'move': (-1, 1)}
-    elif event.sym == tcod.event.K_KP_7:
+    elif game_event.sym == tcod.event.K_KP_7:
         return {'move': (-1, -1)}
-    elif event.sym == tcod.event.K_KP_9:
+    elif game_event.sym == tcod.event.K_KP_9:
         return {'move': (1, -1)}
-    elif event.sym == tcod.event.K_KP_5:
+    elif game_event.sym == tcod.event.K_KP_5:
         return {'move': (0, 0)}
 
-    if event.sym == tcod.event.K_ESCAPE:
+    if game_event.sym == tcod.event.K_ESCAPE:
         return {'exit': True}
 
     return {}

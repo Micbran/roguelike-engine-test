@@ -2,14 +2,11 @@
 
 ## Overview
 
-
-
 ## Installation
-
-
 
 ## Instructions
 
-
-
 ## Resources
+
+## Extras
+* Better logging

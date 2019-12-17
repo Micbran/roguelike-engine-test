@@ -2,6 +2,7 @@ import tcod
 
 
 def render_all(console, entities_list, game_map, screen_width, screen_height, color_dict):
+    # Render Walls/Ground
     for y in range(game_map.height):
         for x in range(game_map.width):
             if game_map.tiles[x][y].sight_block:
@@ -9,6 +10,7 @@ def render_all(console, entities_list, game_map, screen_width, screen_height, co
             else:
                 tcod.console_set_char_background(console, x, y, color_dict.get('DARK_GROUND'), tcod.BKGND_SET)
 
+    # Render Entities
     for entity in entities_list:
         draw_entity(console, entity)
 
