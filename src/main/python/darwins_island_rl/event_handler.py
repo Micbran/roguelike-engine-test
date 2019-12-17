@@ -15,17 +15,17 @@ def handle_keypress(event):
         return {'move': (1, 0)}
     elif event.sym == tcod.event.K_KP_4:
         return {'move': (-1, 0)}
-    elif event.sym == tcod.event.K_KP_8:
-        return {'move': (0, 1)}
     elif event.sym == tcod.event.K_KP_2:
+        return {'move': (0, 1)}
+    elif event.sym == tcod.event.K_KP_8:
         return {'move': (0, -1)}
-    elif event.sym == tcod.event.K_KP_9:
-        return {'move': (1, 1)}
-    elif event.sym == tcod.event.K_KP_7:
-        return {'move': (-1, 1)}
-    elif event.sym == tcod.event.K_KP_1:
-        return {'move': (-1, -1)}
     elif event.sym == tcod.event.K_KP_3:
+        return {'move': (1, 1)}
+    elif event.sym == tcod.event.K_KP_1:
+        return {'move': (-1, 1)}
+    elif event.sym == tcod.event.K_KP_7:
+        return {'move': (-1, -1)}
+    elif event.sym == tcod.event.K_KP_9:
         return {'move': (1, -1)}
     elif event.sym == tcod.event.K_KP_5:
         return {'move': (0, 0)}
