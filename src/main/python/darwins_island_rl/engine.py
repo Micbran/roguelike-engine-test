@@ -18,6 +18,10 @@ SCREEN_WIDTH = 80
 SCREEN_HEIGHT = 50
 MAP_WIDTH = 80
 MAP_HEIGHT = 45
+ROOM_MAX_SIZE = 10
+ROOM_MIN_SIZE = 6
+MAX_ROOMS = 30
+
 
 COLORS = {
     'DARK_WALL': tcod.Color(30, 30, 30),
@@ -42,6 +46,8 @@ def main():
     player = Entity(int(SCREEN_WIDTH/2), int(SCREEN_HEIGHT/2), '@', tcod.white)
     test_npc = Entity(5, 5, '@', tcod.yellow)
     entities = [player, test_npc]
+
+    game_map.make_map(MAX_ROOMS, ROOM_MIN_SIZE, ROOM_MAX_SIZE, MAP_WIDTH, MAP_HEIGHT, player)
 
     root_console.blit(root_console, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
 
