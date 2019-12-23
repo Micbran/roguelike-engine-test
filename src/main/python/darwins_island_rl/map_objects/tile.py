@@ -12,3 +12,4 @@ class Tile:
             sight_block = move_block
 
         self.sight_block = sight_block
+        self.explored = False

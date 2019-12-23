@@ -8,6 +8,7 @@ from event_handler import handle_event
 from entity.entity import Entity
 from render_help import render_all, clear_all
 from map_objects.game_map import GameMap
+from fov_help import init_fov, recompute_fov
 
 # Logger Set-up
 logging.basicConfig(filename='game_log.log', filemode='w', level=logging.DEBUG, format='%(levelname)s: %(message)s')
@@ -16,6 +17,11 @@ logger = logging.getLogger(__name__)
 # "Constants"
 SCREEN_WIDTH = 80
 SCREEN_HEIGHT = 50
+
+FOV_ALG = 0
+FOV_LIGHT_WALLS = True
+FOV_RADIUS = 10
+
 MAP_WIDTH = 80
 MAP_HEIGHT = 45
 ROOM_MAX_SIZE = 10
@@ -26,6 +32,8 @@ MAX_ROOMS = 30
 COLORS = {
     'DARK_WALL': tcod.Color(30, 30, 30),
     'DARK_GROUND': tcod.Color(50, 50, 150),
+    'LIGHT_WALL': tcod.Color(130, 110, 50),
+    'LIGHT_GROUND': tcod.Color(200, 180, 50),
 }
 
 FONT_LOCATION = os.path.join("resources", os.path.join("arial10x10.png"))
@@ -48,12 +56,17 @@ def main():
     entities = [player, test_npc]
 
     game_map.make_map(MAX_ROOMS, ROOM_MIN_SIZE, ROOM_MAX_SIZE, MAP_WIDTH, MAP_HEIGHT, player)
+    fov_recompute = True
+    fov_map = init_fov(game_map)
 
     root_console.blit(root_console, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
 
     # Game Loop
     while True:
-        render_all(root_console, entities, game_map, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS)
+        if fov_recompute:
+            recompute_fov(fov_map, player.x, player.y, FOV_RADIUS, FOV_LIGHT_WALLS, FOV_ALG)
+        render_all(root_console, entities, game_map, fov_map, fov_recompute, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS)
+        fov_recompute = False
         tcod.console_flush()
         clear_all(root_console, entities)
 
@@ -64,9 +77,11 @@ def main():
                 move = action.get('move')
                 if not game_map.is_blocked(player.x + move[X_INDEX], player.y + move[Y_INDEX]):
                     player.move(move[X_INDEX], move[Y_INDEX])
+                    fov_recompute = True
 
             if action.get('exit'):
                 return True
+
 
 
 if __name__ == '__main__':
