@@ -6,10 +6,13 @@ import tcod.event
 
 from event_handler import handle_event
 from entity.entity import Entity, get_blocking_entities_at_location
-from render_help import render_all, clear_all
+from entity.components.combat_component import Combat
+from entity.components.ai import BasicMonster
+from render_help import render_all, clear_all, RenderOrder
 from map_objects.game_map import GameMap
 from fov_help import init_fov, recompute_fov
 from game_state import GameStates
+from death_functions import kill_player, kill_monster
 
 # Logger Set-up
 logging.basicConfig(filename='game_log.log', filemode='w', level=logging.DEBUG, format='%(levelname)s: %(message)s')
@@ -53,7 +56,8 @@ def main():
     game_map = GameMap(MAP_WIDTH, MAP_HEIGHT)
 
     # Player/Entity Predefs
-    player = Entity(int(SCREEN_WIDTH/2), int(SCREEN_HEIGHT/2), '@', tcod.white, "Player", blocks=True)
+    combat_component = Combat(vigor=30, agility=5, brawn=5)
+    player = Entity(int(SCREEN_WIDTH/2), int(SCREEN_HEIGHT/2), '@', tcod.white, "Player", blocks=True, combat=combat_component, render_order=RenderOrder.ACTOR)
     entities = [player]
 
     game_map.make_map(MAX_ROOMS, ROOM_MIN_SIZE, ROOM_MAX_SIZE, MAP_WIDTH, MAP_HEIGHT, player, entities, MAX_ENTITIES_PER_ROOM)
@@ -68,11 +72,12 @@ def main():
     while True:
         if fov_recompute:
             recompute_fov(fov_map, player.x, player.y, FOV_RADIUS, FOV_LIGHT_WALLS, FOV_ALG)
-        render_all(root_console, entities, game_map, fov_map, fov_recompute, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS)
+        render_all(root_console, entities, player, game_map, fov_map, fov_recompute, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS)
         fov_recompute = False
         tcod.console_flush()
         clear_all(root_console, entities)
 
+        player_results = []
         # Event Handling
         for event in tcod.event.wait():
             action = handle_event(event)
@@ -85,7 +90,8 @@ def main():
                     target = get_blocking_entities_at_location(entities, dest_x, dest_y)
 
                     if target:
-                        logger.info("You kick the " + target.name + ", but deal no damage!")  # Console message
+                        attack_results = player.combat.attack(target)
+                        player_results.extend(attack_results)
                     else:
                         player.move(move[X_INDEX], move[Y_INDEX])
                         fov_recompute = True
@@ -94,12 +100,45 @@ def main():
             if action.get('exit'):
                 return True
 
+            for result in player_results:
+                message = result.get('message')
+                dead_entity = result.get('dead')
+
+                if message:
+                    logger.info(message)
+                if dead_entity:
+                    if dead_entity == player:
+                        message, game_state = kill_player(dead_entity)
+                    else:
+                        message = kill_monster(dead_entity)
+
+                    logger.info(message)
+
             if game_state is GameStates.ENEMY_TURN:
                 for entity in entities:
-                    if entity is not player:
-                        logger.debug("The " + entity.name + " does nothing.")
+                    if entity.ai:
+                        enemy_results = entity.ai.take_turn(player, fov_map, game_map, entities)
 
-                game_state = GameStates.PLAYERS_TURN
+                        for result in enemy_results:
+                            message = result.get('message')
+                            dead_entity = result.get('dead')
+
+                            if message:
+                                logger.info(message)
+                            if dead_entity:
+                                if dead_entity == player:
+                                    message, game_state = kill_player(dead_entity)
+                                else:
+                                    message = kill_monster(dead_entity)
+                                print(message)
+
+                                if game_state == GameStates.PLAYER_DEAD:
+                                    break
+
+                        if game_state == GameStates.PLAYER_DEAD:
+                            break
+                else:
+                    game_state = GameStates.PLAYERS_TURN
 
 
 if __name__ == '__main__':
