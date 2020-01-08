@@ -9,7 +9,7 @@ class Entity:
     """
     Base object to represent things on screen.
     """
-    def __init__(self, x, y, char, color, name, blocks=False, combat=None, ai=None, render_order=RenderOrder.CORPSE):
+    def __init__(self, x, y, char, color, name, blocks=False, combat=None, ai=None, item=None, inventory=None, render_order=RenderOrder.CORPSE):
         self.x = x
         self.y = y
         self.char = char
@@ -18,6 +18,8 @@ class Entity:
         self.name = name
         self.combat = combat
         self.ai = ai
+        self.item = item
+        self.inventory = inventory
         self.render_order = render_order
 
         if self.combat:
@@ -25,6 +27,12 @@ class Entity:
 
         if self.ai:
             self.ai.owner = self
+
+        if self.item:
+            self.item.owner = self
+
+        if self.inventory:
+            self.inventory.owner = self
 
     def move(self, dx, dy):
         self.x += dx

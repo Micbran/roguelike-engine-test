@@ -1,6 +1,8 @@
 from enum import Enum
 
 import tcod
+from game_state import GameStates
+from menus import inventory_menu
 
 
 class RenderOrder(Enum):
@@ -24,7 +26,7 @@ def render_bar(panel, x, y, total_width, name, value, max_value, bar_color, back
 
 
 def render_all(console, panel, entities_list, player, game_map, fov_map, fov_recompute, message_log,
-               screen_width, screen_height, bar_width, panel_height, panel_y, color_dict):
+               screen_width, screen_height, bar_width, panel_height, panel_y, color_dict, game_state):
     # Render Walls/Ground
     if fov_recompute:
         for y in range(game_map.height):
@@ -59,7 +61,15 @@ def render_all(console, panel, entities_list, player, game_map, fov_map, fov_rec
     render_bar(panel, 1, 1, bar_width, "HP", player.combat.hp, player.combat.max_hp, tcod.light_red, tcod.darker_red)
 
     # panel.blit(panel, 0, 0, screen_width, panel_height, 0, 0) # Work with blit somehow?
-    tcod.console_blit(panel, 0, 0, screen_width, panel_height, 0, 0, panel_y)
+    tcod.console_blit(panel, 0, 0, screen_width, panel_height, console, 0, panel_y)
+
+    if game_state in (GameStates.SHOW_INVENTORY, GameStates.DROP_INVENTORY):
+        if game_state == GameStates.SHOW_INVENTORY:
+            inventory_title = "Press the key next to an item to use it or press Esc to exit.\n"
+        if game_state == GameStates.DROP_INVENTORY:
+            inventory_title = "Press the key next to an item to drop it or press Esc to exit.\n"
+
+        inventory_menu(console, "Press the key next to an item to use it or press Esc to exit.\n", player.inventory, 50, screen_width, screen_height)
 
 
 def draw_entity(console, entity, fov_map):

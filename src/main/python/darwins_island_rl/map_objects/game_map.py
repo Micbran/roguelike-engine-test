@@ -5,7 +5,9 @@ from map_objects.rectangle import Rectangle
 from entity.entity import Entity
 from entity.components.combat_component import Combat
 from entity.components.ai import BasicMonster
+from entity.components.item import Item
 from render_help import RenderOrder
+from entity.components.item_functions import heal
 
 import tcod
 
@@ -23,7 +25,7 @@ class GameMap:
     def is_blocked(self, x, y):
         return self.tiles[x][y].move_block
 
-    def make_map(self, max_rooms, room_min_size, room_max_size, map_width, map_height, player, entities, max_ent_per_room):
+    def make_map(self, max_rooms, room_min_size, room_max_size, map_width, map_height, player, entities, max_ent_per_room, max_items_per_room):
         rooms = []
         num_rooms = 0  # Potential candidate for refactoring (just use rooms len)
 
@@ -57,7 +59,7 @@ class GameMap:
                         self.create_vert_tunnel(prev_y, center_y, prev_x)
                         self.create_hori_tunnel(prev_x, center_x, center_y)
 
-                self.place_entities(rand_room, entities, max_ent_per_room)
+                self.place_entities(rand_room, entities, max_ent_per_room, max_items_per_room)
 
                 rooms.append(rand_room)
                 num_rooms += 1
@@ -78,8 +80,9 @@ class GameMap:
             self.tiles[x][y].move_block = False
             self.tiles[x][y].sight_block = False
 
-    def place_entities(self, room, entities, max_ent_per_room):
+    def place_entities(self, room, entities, max_ent_per_room, max_items_per_room):
         number_of_entities = randint(0, max_ent_per_room)
+        number_of_items = randint(0, max_items_per_room)
 
         for new_entity in range(number_of_entities):
             new_entity_x = randint(room.x1 + 1, room.x2 - 1)
@@ -96,4 +99,14 @@ class GameMap:
                     monster = Entity(new_entity_x, new_entity_y, 'T', tcod.darker_green, "Troll", blocks=True, combat=troll_combat, ai=ai_component, render_order=RenderOrder.ACTOR)
 
                 entities.append(monster)
+
+        for new_item in range(number_of_items):
+            new_item_x = randint(room.x1 + 1, room.x2 - 1)
+            new_item_y = randint(room.y1 + 1, room.y2 - 1)
+
+            if not any([entity for entity in entities if entity.x == new_item_x and entity.y == new_item_y]):
+                item_component = Item(use_function=heal, amount=4)
+                new_item = Entity(new_item_x, new_item_y, "!", tcod.violet, "Healing Potion", item=item_component, render_order=RenderOrder.ITEM)
+
+                entities.append(new_item)
 

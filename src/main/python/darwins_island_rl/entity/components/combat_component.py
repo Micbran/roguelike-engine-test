@@ -26,12 +26,20 @@ class Combat:
         results = []
 
         damage = self.brawn - target.combat.agility
+        print(damage)
 
         if damage > 0:
-            target.combat.take_damage(damage)
             results.append({'message': Message("{0} attacks {1}, dealing {2} damage!".format(self.owner.name.capitalize(), target.name, str(damage)))})
             results.extend(target.combat.take_damage(damage))
         else:
             results.append({'message': Message("{0} attacks {1}, but {1} is unaffected!".format(self.owner.name.capitalize(), target.name))})
 
         return results
+
+    def heal(self, amount):
+        save_hp = self.hp
+        self.hp += amount
+
+        if self.hp > self.max_hp:
+            self.hp = self.max_hp
+        return self.hp - save_hp
