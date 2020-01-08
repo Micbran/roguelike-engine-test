@@ -3,7 +3,6 @@ import os
 
 import tcod
 import tcod.event
-
 from event_handler import handle_event
 from entity.entity import Entity, get_blocking_entities_at_location
 from entity.components.combat_component import Combat
