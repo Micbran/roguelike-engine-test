@@ -34,4 +34,6 @@ def handle_keypress(game_event):
     if game_event.sym == tcod.event.K_ESCAPE:
         return {'exit': True}
 
+    # TODO for look function, check code at end of part 7
+
     return {}

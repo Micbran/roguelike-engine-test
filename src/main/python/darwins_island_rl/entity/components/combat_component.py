@@ -1,6 +1,8 @@
 import logging
 logger = logging.getLogger(__name__)
 
+from game_messages import Message
+
 
 class Combat:
     def __init__(self, vigor, agility, brawn):
@@ -27,9 +29,9 @@ class Combat:
 
         if damage > 0:
             target.combat.take_damage(damage)
-            results.append({'message': "{0} attacks {1}, dealing {2} damage!".format(self.owner.name.capitalize(), target.name, str(damage))})
+            results.append({'message': Message("{0} attacks {1}, dealing {2} damage!".format(self.owner.name.capitalize(), target.name, str(damage)))})
             results.extend(target.combat.take_damage(damage))
         else:
-            results.append({'message': "{0} attacks {1}, but {1} is unaffected!".format(self.owner.name.capitalize(), target.name)})
+            results.append({'message': Message("{0} attacks {1}, but {1} is unaffected!".format(self.owner.name.capitalize(), target.name))})
 
         return results

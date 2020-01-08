@@ -3,6 +3,8 @@ import os
 
 import tcod
 import tcod.event
+import tcod.console
+
 from event_handler import handle_event
 from entity.entity import Entity, get_blocking_entities_at_location
 from entity.components.combat_component import Combat
@@ -12,6 +14,7 @@ from map_objects.game_map import GameMap
 from fov_help import init_fov, recompute_fov
 from game_state import GameStates
 from death_functions import kill_player, kill_monster
+from game_messages import MessageLog
 
 # Logger Set-up
 logging.basicConfig(filename='game_log.log', filemode='w', level=logging.DEBUG, format='%(levelname)s: %(message)s')
@@ -21,12 +24,20 @@ logger = logging.getLogger(__name__)
 SCREEN_WIDTH = 80
 SCREEN_HEIGHT = 50
 
+HP_MESSAGE_PANEL_WIDTH = 20
+HP_MESSAGE_PANEL_HEIGHT = 7
+HP_MESSAGE_PANEL_Y_LOC = SCREEN_HEIGHT - HP_MESSAGE_PANEL_HEIGHT
+
+MESSAGE_X_LOC = HP_MESSAGE_PANEL_WIDTH + 2
+MESSAGE_WIDTH = SCREEN_WIDTH - HP_MESSAGE_PANEL_WIDTH - 2
+MESSAGE_HEIGHT = HP_MESSAGE_PANEL_HEIGHT - 1
+
 FOV_ALG = 0
 FOV_LIGHT_WALLS = True
 FOV_RADIUS = 10
 
 MAP_WIDTH = 80
-MAP_HEIGHT = 45
+MAP_HEIGHT = 43
 ROOM_MAX_SIZE = 10
 ROOM_MIN_SIZE = 6
 MAX_ROOMS = 30
@@ -52,7 +63,9 @@ def main():
     tcod.console_set_custom_font(FONT_LOCATION, tcod.FONT_TYPE_GREYSCALE | tcod.FONT_LAYOUT_TCOD)
     root_console = tcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, "Darwin's Island RL",
                                           fullscreen=False, renderer=tcod.RENDERER_SDL2, order='F', vsync=True)
+    hp_message_panel = tcod.console.Console(SCREEN_WIDTH, HP_MESSAGE_PANEL_HEIGHT, order="F")
     game_map = GameMap(MAP_WIDTH, MAP_HEIGHT)
+    message_log = MessageLog(MESSAGE_X_LOC, MESSAGE_WIDTH, MESSAGE_HEIGHT)
 
     # Player/Entity Predefs
     combat_component = Combat(vigor=30, agility=5, brawn=5)
@@ -71,7 +84,7 @@ def main():
     while True:
         if fov_recompute:
             recompute_fov(fov_map, player.x, player.y, FOV_RADIUS, FOV_LIGHT_WALLS, FOV_ALG)
-        render_all(root_console, entities, player, game_map, fov_map, fov_recompute, SCREEN_WIDTH, SCREEN_HEIGHT, COLORS)
+        render_all(root_console, hp_message_panel, entities, player, game_map, fov_map, fov_recompute, message_log, SCREEN_WIDTH, SCREEN_HEIGHT, HP_MESSAGE_PANEL_WIDTH, HP_MESSAGE_PANEL_HEIGHT, HP_MESSAGE_PANEL_Y_LOC, COLORS)
         fov_recompute = False
         tcod.console_flush()
         clear_all(root_console, entities)
@@ -104,14 +117,16 @@ def main():
                 dead_entity = result.get('dead')
 
                 if message:
-                    logger.info(message)
+                    logger.info(message.text)
+                    message_log.add_message(message)
                 if dead_entity:
                     if dead_entity == player:
                         message, game_state = kill_player(dead_entity)
                     else:
                         message = kill_monster(dead_entity)
 
-                    logger.info(message)
+                    logger.info(message.text)
+                    message_log.add_message(message)
 
             if game_state is GameStates.ENEMY_TURN:
                 for entity in entities:
@@ -123,13 +138,16 @@ def main():
                             dead_entity = result.get('dead')
 
                             if message:
-                                logger.info(message)
+                                logger.info(message.text)
+                                message_log.add_message(message)
                             if dead_entity:
                                 if dead_entity == player:
                                     message, game_state = kill_player(dead_entity)
                                 else:
                                     message = kill_monster(dead_entity)
-                                print(message)
+
+                                logger.info(message.text)
+                                message_log.add_message(message)
 
                                 if game_state == GameStates.PLAYER_DEAD:
                                     break

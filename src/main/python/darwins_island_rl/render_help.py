@@ -2,12 +2,29 @@ from enum import Enum
 
 import tcod
 
+
 class RenderOrder(Enum):
     CORPSE = 1
     ITEM = 2
     ACTOR = 3
 
-def render_all(console, entities_list, player, game_map, fov_map, fov_recompute, screen_width, screen_height, color_dict):
+
+def render_bar(panel, x, y, total_width, name, value, max_value, bar_color, back_color):
+    bar_width = int(float(value) / max_value * total_width)
+    panel.default_bg = back_color
+    tcod.console_rect(panel, x, y, total_width, 1, False, tcod.BKGND_SCREEN)
+
+    panel.default_bg = bar_color
+    if bar_width > 0:
+        tcod.console_rect(panel, x, y, bar_width, 1, False, tcod.BKGND_SCREEN)
+
+    panel.default_fg = tcod.white
+    tcod.console_print_ex(panel, int(x + total_width / 2), y, tcod.BKGND_NONE, tcod.CENTER,
+                          "{0}: {1}/{2}".format(name, value, max_value))
+
+
+def render_all(console, panel, entities_list, player, game_map, fov_map, fov_recompute, message_log,
+               screen_width, screen_height, bar_width, panel_height, panel_y, color_dict):
     # Render Walls/Ground
     if fov_recompute:
         for y in range(game_map.height):
@@ -30,9 +47,19 @@ def render_all(console, entities_list, player, game_map, fov_map, fov_recompute,
     for entity in entities_list_render_order:
         draw_entity(console, entity, fov_map)
 
-        console.default_fg = tcod.white
-        tcod.console_print_ex(console, 1, screen_height - 2, tcod.BKGND_NONE, tcod.LEFT, 'HP: {0:02}/{1:02}'.format(player.combat.hp, player.combat.max_hp))
-        console.blit(console, 0, screen_width, screen_height, 0, 0, 0)
+    console.blit(console, 0, screen_width, screen_height, 0, 0, 0)
+    panel.default_bg = tcod.black
+    tcod.console_clear(panel)
+    y = 1
+    for message in message_log.messages:
+        panel.default_fg = message.color
+        tcod.console_print_ex(panel, message_log.x, y, tcod.BKGND_NONE, tcod.LEFT, message.text)
+        y += 1
+
+    render_bar(panel, 1, 1, bar_width, "HP", player.combat.hp, player.combat.max_hp, tcod.light_red, tcod.darker_red)
+
+    # panel.blit(panel, 0, 0, screen_width, panel_height, 0, 0) # Work with blit somehow?
+    tcod.console_blit(panel, 0, 0, screen_width, panel_height, 0, 0, panel_y)
 
 
 def draw_entity(console, entity, fov_map):

@@ -4,6 +4,7 @@ import tcod
 
 from render_help import RenderOrder
 
+
 class Entity:
     """
     Base object to represent things on screen.
