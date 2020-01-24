@@ -7,9 +7,17 @@ from entity.components.combat_component import Combat
 from entity.components.ai import BasicMonster
 from entity.components.item import Item
 from render_help import RenderOrder
-from entity.components.item_functions import heal
+from entity.components.item_functions import heal, cast_lightning, cast_fireball, cast_confuse
+from game_messages import Message
 
 import tcod
+
+# TODO this could probably stand to be moved
+# TODO if controls get mappable, these will need to be updated
+fireball_target_message = Message("Select a target for fireball. Esc to cancel, keypad * to cycle targets.", tcod.light_cyan)
+confuse_target_message = Message("Select a target for confuse. Esc to cancel, keypad * to cycle targets.", tcod.light_cyan)
+
+# TODO resolvers for most random things
 
 
 class GameMap:
@@ -105,8 +113,20 @@ class GameMap:
             new_item_y = randint(room.y1 + 1, room.y2 - 1)
 
             if not any([entity for entity in entities if entity.x == new_item_x and entity.y == new_item_y]):
-                item_component = Item(use_function=heal, amount=4)
-                new_item = Entity(new_item_x, new_item_y, "!", tcod.violet, "Healing Potion", item=item_component, render_order=RenderOrder.ITEM)
+                item_chance = randint(0, 100)
+
+                if item_chance < 70:
+                    item_component = Item(use_function=heal, amount=4)
+                    new_item = Entity(new_item_x, new_item_y, "!", tcod.violet, "Healing Potion", item=item_component, render_order=RenderOrder.ITEM)
+                elif item_chance < 80:
+                    item_component = Item(use_function=cast_fireball, targeting=True, targeting_message=fireball_target_message, damage=12, radius=3)
+                    new_item = Entity(new_item_x, new_item_y, "?", tcod.red, "Fireball Scroll", render_order=RenderOrder.ITEM, item=item_component)
+                elif item_chance < 90:
+                    item_component = Item(use_function=cast_confuse, tageting=True, targeting_message=confuse_target_message)
+                    item = Entity(new_item_x, new_item_y, "?", tcod.light_pink, "Confusion Scroll", render_order=RenderOrder.ITEM, item=item_component)
+                else:
+                    item_component = Item(use_function=cast_lightning, damage=20, max_range=5)
+                    new_item = Entity(new_item_x, new_item_y, "?", tcod.darker_cyan, "Lightning Scroll", render_order=RenderOrder.ITEM, item=item_component)
 
                 entities.append(new_item)
 

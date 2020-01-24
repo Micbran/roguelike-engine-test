@@ -12,6 +12,8 @@ def handle_event(game_event, game_state):
         return handle_keypress_inventory(game_event)
     elif game_event.type == "KEYDOWN" and game_state == GameStates.PLAYER_DEAD:
         return handle_keypress_dead(game_event)
+    elif game_event.type == "KEYDOWN" and game_state == GameStates.TARGETING:
+        return handle_keypress_targeting(game_event)
 
     return {}
 
@@ -66,5 +68,16 @@ def handle_keypress_dead(game_event):
         return {'show_inventory': True}
     elif game_event.sym == tcod.event.K_ESCAPE:
         return {'exit': True}
+
+    return {}
+
+
+def handle_keypress_targeting(game_event):
+    if game_event.sym == tcod.event.K_ESCAPE:
+        return {'exit': True}
+    if game_event.sym == tcod.event.K_KP_MULTIPLY:
+        return {'cycle': True}
+    if game_event.sym == tcod.event.K_KP_ENTER or game_event.sym == tcod.event.K_RETURN or tcod.event.K_RETURN2:
+        return {'submit': True}
 
     return {}

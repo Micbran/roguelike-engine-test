@@ -82,6 +82,11 @@ def main():
     game_state = GameStates.PLAYERS_TURN
     previous_game_state = game_state
 
+    targeting_item = None
+    cycle_entity_list = []
+    targeted_entity = None
+    target_save_color = None
+
     root_console.blit(root_console, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
 
     # Game Loop
@@ -133,18 +138,56 @@ def main():
             if action.get('inventory_index') is not None and previous_game_state != GameStates.PLAYER_DEAD and action.get('inventory_index') < len(player.inventory.items):
                 item = player.inventory.items[action.get('inventory_index')]
                 if game_state == GameStates.SHOW_INVENTORY:
-                    player_results.extend(player.inventory.use(item))
+                    player_results.extend(player.inventory.use(item, entities=entities, fov_map=fov_map))
                 elif game_state == GameStates.DROP_INVENTORY:
                     player_results.extend(player.inventory.drop_item(item))
+            if game_state == GameStates.TARGETING:  # TODO Fix keyboard targeting, clear_entity_list might be easier to work with if we just mark already selected entities
+                cycle = action.get("cycle")
+                submit = action.get("submit")
+                prelim_list = []
+                min_dist = 1000
+                for entity in entities:  # turn this into a function
+                    if tcod.map_is_in_fov(fov_map, entity.x, entity.y):
+                        prelim_list.append(entity)
+                if cycle:
+                    if target_save_color and targeted_entity:
+                        targeted_entity.color = target_save_color
+                    select_entity = None
+                    for entity in prelim_list:  # find closest non-previously selected creature
+                        if entity.combat and entity.distance_to(player) <= min_dist and entity not in cycle_entity_list:
+                            min_dist = entity.distance_to(player)
+                            select_entity = entity
+
+                    if select_entity:  # color it white
+                        target_save_color = select_entity.color
+                        targeted_entity = select_entity
+                        targeted_entity.color = tcod.white
+                        cycle_entity_list.append(select_entity)  # mark it in the list so we don't pick it again
+                    else:
+                        cycle_entity_list.clear()
+                if submit:
+                    if target_save_color and targeted_entity:
+                        targeted_entity.color = target_save_color
+                    target_x = targeted_entity.x
+                    target_y = targeted_entity.y
+
+                    item_use_results = player.inventory.use(targeting_item, entities=entities, fov_map=fov_map, target_x=target_x, target_y=target_y)
+                    player_results.extend(item_use_results)
+
             if action.get('exit'):
                 if game_state in (GameStates.SHOW_INVENTORY, GameStates.DROP_INVENTORY):
                     game_state = previous_game_state
-                    root_console.clear()
-                    render_all(root_console, hp_message_panel, entities, player, game_map, fov_map, True,
-                               message_log, SCREEN_WIDTH, SCREEN_HEIGHT, HP_MESSAGE_PANEL_WIDTH,
-                               HP_MESSAGE_PANEL_HEIGHT, HP_MESSAGE_PANEL_Y_LOC, COLORS, game_state)
+                elif game_state == GameStates.TARGETING:
+                    player_results.append({"targeting_canceled": True})
+                    targeted_entity = None
+                    target_save_color = None
+                    cycle_entity_list.clear()
                 else:
                     return True
+                root_console.clear(fg=(0, 127, 0))
+                render_all(root_console, hp_message_panel, entities, player, game_map, fov_map, True,
+                           message_log, SCREEN_WIDTH, SCREEN_HEIGHT, HP_MESSAGE_PANEL_WIDTH,
+                           HP_MESSAGE_PANEL_HEIGHT, HP_MESSAGE_PANEL_Y_LOC, COLORS, game_state)
 
             for result in player_results:
                 message = result.get('message')
@@ -152,6 +195,8 @@ def main():
                 item_added = result.get('item_added')
                 item_consumed = result.get('consumed')
                 item_dropped = result.get('item_dropped')
+                targeting = result.get('targeting')
+                targeting_canceled = result.get('targeting_canceled')
 
                 if message:
                     logger.info(message.text)
@@ -169,6 +214,18 @@ def main():
                     game_state = GameStates.ENEMY_TURN
                 if item_consumed:
                     game_state = GameStates.ENEMY_TURN
+                if targeting:
+                    previous_game_state = GameStates.PLAYERS_TURN
+                    game_state = GameStates.TARGETING
+                    targeting_item = targeting
+
+                    logger.info(targeting_item.item.targeting_message.text)
+                    message_log.add_message(targeting_item.item.targeting_message)
+                if targeting_canceled:
+                    game_state = previous_game_state
+
+                    logger.info("Targeting canceled.")
+                    message_log.add_message(Message("Targeting canceled", tcod.yellow))
                 if item_dropped:
                     entities.append(item_dropped)
                     game_state = GameStates.ENEMY_TURN

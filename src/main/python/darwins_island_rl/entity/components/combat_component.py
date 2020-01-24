@@ -26,7 +26,6 @@ class Combat:
         results = []
 
         damage = self.brawn - target.combat.agility
-        print(damage)
 
         if damage > 0:
             results.append({'message': Message("{0} attacks {1}, dealing {2} damage!".format(self.owner.name.capitalize(), target.name, str(damage)))})
