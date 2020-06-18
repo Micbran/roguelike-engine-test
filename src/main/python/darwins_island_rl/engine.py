@@ -1,85 +1,86 @@
 import logging
-import os
 
 import tcod
 import tcod.event
 import tcod.console
 
-from event_handler import handle_event
-from entity.entity import Entity, get_blocking_entities_at_location
-from entity.components.combat_component import Combat
-from entity.components.inventory import Inventory
-from entity.components.ai import BasicMonster
+from loader_functions.init_new_game import get_constants, get_game_variables
+from loader_functions.data_loaders import save_game, load_game
+from event_handler import handle_event, handle_event_main_menu
+from entity.entity import get_blocking_entities_at_location
 from render_help import render_all, clear_all, RenderOrder
-from map_objects.game_map import GameMap
 from fov_help import init_fov, recompute_fov
 from game_state import GameStates
 from death_functions import kill_player, kill_monster
-from game_messages import MessageLog, Message
+from game_messages import Message
+from menus import main_menu, message_box
 
 # Logger Set-up
 logging.basicConfig(filename='game_log.log', filemode='w', level=logging.DEBUG, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
-# "Constants"
-SCREEN_WIDTH = 80
-SCREEN_HEIGHT = 50
-
-HP_MESSAGE_PANEL_WIDTH = 20
-HP_MESSAGE_PANEL_HEIGHT = 7
-HP_MESSAGE_PANEL_Y_LOC = SCREEN_HEIGHT - HP_MESSAGE_PANEL_HEIGHT
-
-MESSAGE_X_LOC = HP_MESSAGE_PANEL_WIDTH + 2
-MESSAGE_WIDTH = SCREEN_WIDTH - HP_MESSAGE_PANEL_WIDTH - 2
-MESSAGE_HEIGHT = HP_MESSAGE_PANEL_HEIGHT - 1
-
-FOV_ALG = 0
-FOV_LIGHT_WALLS = True
-FOV_RADIUS = 10
-
-MAP_WIDTH = 80
-MAP_HEIGHT = 43
-ROOM_MAX_SIZE = 10
-ROOM_MIN_SIZE = 6
-MAX_ROOMS = 30
-MAX_ENTITIES_PER_ROOM = 3
-MAX_ITEMS_PER_ROOM = 2
-
-
-COLORS = {
-    'DARK_WALL': tcod.Color(30, 30, 30),
-    'DARK_GROUND': tcod.Color(50, 50, 150),
-    'LIGHT_WALL': tcod.Color(130, 110, 50),
-    'LIGHT_GROUND': tcod.Color(200, 180, 50),
-}
-
-FONT_LOCATION = os.path.join("resources", os.path.join("arial10x10.png"))
-
-X_INDEX = 0
-Y_INDEX = 1
-
 
 def main():
+    constants = get_constants()
     # Set-up
     logger.info("Game start")
-    tcod.console_set_custom_font(FONT_LOCATION, tcod.FONT_TYPE_GREYSCALE | tcod.FONT_LAYOUT_TCOD)
-    root_console = tcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT, "Darwin's Island RL",
+    tcod.console_set_custom_font(constants['FONT_LOCATION'], tcod.FONT_TYPE_GREYSCALE | tcod.FONT_LAYOUT_TCOD)
+    root_console = tcod.console_init_root(constants['SCREEN_WIDTH'], constants['SCREEN_HEIGHT'], constants['WINDOW_TITLE'],
                                           fullscreen=False, renderer=tcod.RENDERER_SDL2, order='F', vsync=True)
-    hp_message_panel = tcod.console.Console(SCREEN_WIDTH, HP_MESSAGE_PANEL_HEIGHT, order="F")
-    game_map = GameMap(MAP_WIDTH, MAP_HEIGHT)
-    message_log = MessageLog(MESSAGE_X_LOC, MESSAGE_WIDTH, MESSAGE_HEIGHT)
+    hp_message_panel = tcod.console.Console(constants['SCREEN_WIDTH'], constants['HP_MESSAGE_PANEL_HEIGHT'], order="F")
 
     # Player/Entity Predefs
-    combat_component = Combat(vigor=30, agility=5, brawn=5)
-    inventory_component = Inventory(26)
-    player = Entity(int(SCREEN_WIDTH/2), int(SCREEN_HEIGHT/2), '@', tcod.white, "Player", blocks=True, combat=combat_component, inventory=inventory_component, render_order=RenderOrder.ACTOR)
-    entities = [player]
+    player = None
+    entities = []
+    game_map = None
+    message_log = None
+    game_state = None
 
-    game_map.make_map(MAX_ROOMS, ROOM_MIN_SIZE, ROOM_MAX_SIZE, MAP_WIDTH, MAP_HEIGHT, player, entities, MAX_ENTITIES_PER_ROOM, MAX_ITEMS_PER_ROOM)
+    show_main_menu = True
+    show_load_error_message = False
+
+    main_menu_background_image = tcod.image_load(constants['BACKGROUND_IMAGE_LOCATION'])
+
+    key = tcod.Key()
+    mouse = tcod.Mouse()
+
+    while True:
+        tcod.sys_check_for_event(tcod.EVENT_KEY_PRESS | tcod.EVENT_MOUSE, key, mouse)
+        action = handle_event_main_menu(key)
+        if show_main_menu:
+            main_menu(root_console, main_menu_background_image, constants['SCREEN_WIDTH'], constants['SCREEN_HEIGHT'])
+
+            if show_load_error_message:
+                message_box(root_console, "No save game to load.", 50, constants['SCREEN_WIDTH'], constants['SCREEN_HEIGHT'])
+
+            tcod.console_flush()
+
+            new_game = action.get('new_game')
+            load_saved_game = action.get('load_saved_game')
+            exit_game = action.get('exit')
+            if show_load_error_message and (new_game or load_saved_game or exit_game):
+                show_load_error_message = False
+            elif new_game:
+                player, entities, game_map, message_log, game_state = get_game_variables(constants)
+                show_main_menu = False
+            elif load_saved_game:
+                try:
+                    player, entities, game_map, message_log, game_state = load_game()
+                    show_main_menu = False
+                except FileNotFoundError:
+                    show_load_error_message = True
+            elif exit_game:
+                break
+        else:
+            root_console.clear(fg=(255, 255, 63))
+            play_game(player, entities, game_map, message_log, game_state, root_console, hp_message_panel, constants)
+            show_main_menu = True
+
+
+def play_game(player, entities, game_map, message_log, game_state, root_console, hp_message_panel, constants):
     fov_recompute = True
     fov_map = init_fov(game_map)
 
-    game_state = GameStates.PLAYERS_TURN
     previous_game_state = game_state
 
     targeting_item_entity = None
@@ -87,13 +88,17 @@ def main():
     target_save_color = None
     prelim_list = []
 
-    root_console.blit(root_console, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
+    root_console.blit(root_console, 0, constants['SCREEN_WIDTH'], constants['SCREEN_HEIGHT'], 0, 0, 0)
 
     # Game Loop
     while True:
         if fov_recompute:
-            recompute_fov(fov_map, player.x, player.y, FOV_RADIUS, FOV_LIGHT_WALLS, FOV_ALG)
-        render_all(root_console, hp_message_panel, entities, player, game_map, fov_map, fov_recompute, message_log, SCREEN_WIDTH, SCREEN_HEIGHT, HP_MESSAGE_PANEL_WIDTH, HP_MESSAGE_PANEL_HEIGHT, HP_MESSAGE_PANEL_Y_LOC, COLORS, game_state)
+            recompute_fov(fov_map, player.x, player.y, constants['FOV_RADIUS'], constants['FOV_LIGHT_WALLS'],
+                          constants['FOV_ALG'])
+        render_all(root_console, hp_message_panel, entities, player, game_map, fov_map, fov_recompute, message_log,
+                   constants['SCREEN_WIDTH'], constants['SCREEN_HEIGHT'], constants['HP_MESSAGE_PANEL_WIDTH'],
+                   constants['HP_MESSAGE_PANEL_HEIGHT'], constants['HP_MESSAGE_PANEL_Y_LOC'], constants['COLORS'],
+                   game_state)
         fov_recompute = False
         tcod.console_flush()
         clear_all(root_console, entities)
@@ -114,7 +119,7 @@ def main():
                         attack_results = player.combat.attack(target)
                         player_results.extend(attack_results)
                     else:
-                        player.move(move[X_INDEX], move[Y_INDEX])
+                        player.move(move[constants['X_INDEX']], move[constants['Y_INDEX']])
                         fov_recompute = True
                     game_state = GameStates.ENEMY_TURN
 
@@ -135,27 +140,32 @@ def main():
                 previous_game_state = game_state
                 game_state = GameStates.DROP_INVENTORY
 
-            if action.get('inventory_index') is not None and previous_game_state != GameStates.PLAYER_DEAD and action.get('inventory_index') < len(player.inventory.items):
+            if action.get(
+                    'inventory_index') is not None and previous_game_state != GameStates.PLAYER_DEAD and action.get(
+                    'inventory_index') < len(player.inventory.items):
                 item = player.inventory.items[action.get('inventory_index')]
                 if game_state == GameStates.SHOW_INVENTORY:
                     player_results.extend(player.inventory.use(item, entities=entities, fov_map=fov_map))
                 elif game_state == GameStates.DROP_INVENTORY:
                     player_results.extend(player.inventory.drop_item(item))
 
-            if game_state == GameStates.TARGETING:  # TODO Fix keyboard targeting, clear_entity_list might be easier to work with if we just mark already selected entities
+            if game_state == GameStates.TARGETING:
                 cycle = action.get("cycle")
                 submit = action.get("submit")
-                max_dist = targeting_item_entity.item.max_range if hasattr(targeting_item_entity.item, 'max_range') else 5
+                max_dist = targeting_item_entity.item.max_range if hasattr(targeting_item_entity.item,
+                                                                           'max_range') else 5
                 if not prelim_list:  # only "make" prelim list if it's empty
                     for entity in entities:  # turn this into a function
                         if tcod.map_is_in_fov(fov_map, entity.x, entity.y) and entity.combat and entity is not player:
                             prelim_list.append(entity)
                     for index in range(len(prelim_list)):  # selection sort using player.distance_to(prelim_list[i])
                         closest_entity = index
-                        for sub_index in range(index+1, len(prelim_list)):
-                            if player.distance_to(prelim_list[closest_entity]) > player.distance_to(prelim_list[sub_index]):
+                        for sub_index in range(index + 1, len(prelim_list)):
+                            if player.distance_to(prelim_list[closest_entity]) > player.distance_to(
+                                    prelim_list[sub_index]):
                                 closest_entity = sub_index
-                        prelim_list[index], prelim_list[closest_entity] = prelim_list[closest_entity], prelim_list[index]
+                        prelim_list[index], prelim_list[closest_entity] = prelim_list[closest_entity], prelim_list[
+                            index]
                     for index in range(len(prelim_list)):
                         if player.distance_to(prelim_list[index]) > max_dist:
                             prelim_list.pop(index)
@@ -164,7 +174,8 @@ def main():
                     targeted_entity = None
                     target_save_color = None
                     prelim_list.clear()
-                    player_results.append({'message': Message("There is no target within targetable range ({0}).".format(max_dist), tcod.red)})
+                    player_results.append({'message': Message(
+                        "There is no target within targetable range ({0}).".format(max_dist), tcod.red)})
                 if cycle:
                     if target_save_color and targeted_entity:
                         targeted_entity.color = target_save_color
@@ -183,7 +194,8 @@ def main():
                         target_x = targeted_entity.x
                         target_y = targeted_entity.y
 
-                        item_use_results = player.inventory.use(targeting_item_entity, entities=entities, fov_map=fov_map, target_x=target_x, target_y=target_y)
+                        item_use_results = player.inventory.use(targeting_item_entity, entities=entities,
+                                                                fov_map=fov_map, target_x=target_x, target_y=target_y)
                         player_results.extend(item_use_results)
                         prelim_list.clear()
                         targeted_entity = None
@@ -203,11 +215,14 @@ def main():
                     target_save_color = None
                     prelim_list.clear()
                 else:
+                    save_game(player, entities, game_map, message_log, game_state)
                     return True
                 root_console.clear(fg=(0, 127, 0))
                 render_all(root_console, hp_message_panel, entities, player, game_map, fov_map, True,
-                           message_log, SCREEN_WIDTH, SCREEN_HEIGHT, HP_MESSAGE_PANEL_WIDTH,
-                           HP_MESSAGE_PANEL_HEIGHT, HP_MESSAGE_PANEL_Y_LOC, COLORS, game_state)
+                           message_log, constants['SCREEN_WIDTH'], constants['SCREEN_HEIGHT'],
+                           constants['HP_MESSAGE_PANEL_WIDTH'],
+                           constants['HP_MESSAGE_PANEL_HEIGHT'], constants['HP_MESSAGE_PANEL_Y_LOC'],
+                           constants['COLORS'], game_state)
 
             for result in player_results:
                 message = result.get('message')
@@ -252,8 +267,10 @@ def main():
 
             root_console.clear(fg=(0, 127, 0))
             render_all(root_console, hp_message_panel, entities, player, game_map, fov_map, True,
-                       message_log, SCREEN_WIDTH, SCREEN_HEIGHT, HP_MESSAGE_PANEL_WIDTH,
-                       HP_MESSAGE_PANEL_HEIGHT, HP_MESSAGE_PANEL_Y_LOC, COLORS, game_state)
+                       message_log, constants['SCREEN_WIDTH'], constants['SCREEN_HEIGHT'],
+                       constants['HP_MESSAGE_PANEL_WIDTH'],
+                       constants['HP_MESSAGE_PANEL_HEIGHT'], constants['HP_MESSAGE_PANEL_Y_LOC'], constants['COLORS'],
+                       game_state)
 
             if game_state is GameStates.ENEMY_TURN:
                 for entity in entities:

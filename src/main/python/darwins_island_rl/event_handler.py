@@ -77,7 +77,20 @@ def handle_keypress_targeting(game_event):
         return {'exit': True}
     if game_event.sym == tcod.event.K_KP_MULTIPLY:
         return {'cycle': True}
-    if game_event.sym == tcod.event.K_KP_ENTER or game_event.sym == tcod.event.K_RETURN or tcod.event.K_RETURN2:
+    if game_event.sym == tcod.event.K_KP_ENTER or game_event.sym == tcod.event.K_RETURN or game_event.sym == tcod.event.K_RETURN2:
         return {'submit': True}
+
+    return {}
+
+
+def handle_event_main_menu(key):
+    key_char = chr(key.c)
+
+    if key_char == 'a':
+        return {'new_game': True}
+    elif key_char == 'b':
+        return {'load_saved_game': True}
+    elif key_char == 'c' or key.vk == tcod.KEY_ESCAPE:
+        return {'exit': True}
 
     return {}

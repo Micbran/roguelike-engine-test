@@ -39,3 +39,20 @@ def inventory_menu(console, header, inventory, inventory_width, screen_width, sc
         options = [item.name for item in inventory.items]
 
     return menu(console, header, options, inventory_width, screen_width, screen_height)
+
+
+def main_menu(con, background_image, screen_width, screen_height):
+    tcod.image_blit_2x(background_image, con, 0, 0)
+
+    tcod.console_set_default_foreground(con, tcod.light_yellow)
+    tcod.console_print_ex(con, int(screen_width / 2), int(screen_height / 2) - 4, tcod.BKGND_NONE, tcod.CENTER,
+                          'RL Engine Test')
+    tcod.console_print_ex(con, int(screen_width / 2), int(screen_height - 2), tcod.BKGND_NONE, tcod.CENTER,
+                          'By Brandon Komplin')
+
+    menu(con, '', ['New Game', 'Continue', 'Quit'], 24, screen_width, screen_height)
+
+
+def message_box(con, header, width, screen_width, screen_height):
+    menu(con, header, [], width, screen_width, screen_height)
+
