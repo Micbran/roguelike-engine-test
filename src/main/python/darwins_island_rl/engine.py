@@ -82,10 +82,10 @@ def main():
     game_state = GameStates.PLAYERS_TURN
     previous_game_state = game_state
 
-    targeting_item = None
-    cycle_entity_list = []
+    targeting_item_entity = None
     targeted_entity = None
     target_save_color = None
+    prelim_list = []
 
     root_console.blit(root_console, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
 
@@ -141,38 +141,58 @@ def main():
                     player_results.extend(player.inventory.use(item, entities=entities, fov_map=fov_map))
                 elif game_state == GameStates.DROP_INVENTORY:
                     player_results.extend(player.inventory.drop_item(item))
+
             if game_state == GameStates.TARGETING:  # TODO Fix keyboard targeting, clear_entity_list might be easier to work with if we just mark already selected entities
                 cycle = action.get("cycle")
                 submit = action.get("submit")
-                prelim_list = []
-                min_dist = 1000
-                for entity in entities:  # turn this into a function
-                    if tcod.map_is_in_fov(fov_map, entity.x, entity.y):
-                        prelim_list.append(entity)
+                max_dist = targeting_item_entity.item.max_range if hasattr(targeting_item_entity.item, 'max_range') else 5
+                if not prelim_list:  # only "make" prelim list if it's empty
+                    for entity in entities:  # turn this into a function
+                        if tcod.map_is_in_fov(fov_map, entity.x, entity.y) and entity.combat and entity is not player:
+                            prelim_list.append(entity)
+                    for index in range(len(prelim_list)):  # selection sort using player.distance_to(prelim_list[i])
+                        closest_entity = index
+                        for sub_index in range(index+1, len(prelim_list)):
+                            if player.distance_to(prelim_list[closest_entity]) > player.distance_to(prelim_list[sub_index]):
+                                closest_entity = sub_index
+                        prelim_list[index], prelim_list[closest_entity] = prelim_list[closest_entity], prelim_list[index]
+                    for index in range(len(prelim_list)):
+                        if player.distance_to(prelim_list[index]) > max_dist:
+                            prelim_list.pop(index)
+                if not prelim_list:  # if there's nothing in range
+                    player_results.append({"targeting_canceled": True})
+                    targeted_entity = None
+                    target_save_color = None
+                    prelim_list.clear()
+                    player_results.append({'message': Message("There is no target within targetable range ({0}).".format(max_dist), tcod.red)})
                 if cycle:
                     if target_save_color and targeted_entity:
                         targeted_entity.color = target_save_color
-                    select_entity = None
-                    for entity in prelim_list:  # find closest non-previously selected creature
-                        if entity.combat and entity.distance_to(player) <= min_dist and entity not in cycle_entity_list:
-                            min_dist = entity.distance_to(player)
-                            select_entity = entity
+                    select_entity = prelim_list.pop(0)
+                    prelim_list.append(select_entity)
 
                     if select_entity:  # color it white
                         target_save_color = select_entity.color
                         targeted_entity = select_entity
                         targeted_entity.color = tcod.white
-                        cycle_entity_list.append(select_entity)  # mark it in the list so we don't pick it again
-                    else:
-                        cycle_entity_list.clear()
+
                 if submit:
                     if target_save_color and targeted_entity:
                         targeted_entity.color = target_save_color
-                    target_x = targeted_entity.x
-                    target_y = targeted_entity.y
+                    if targeted_entity:
+                        target_x = targeted_entity.x
+                        target_y = targeted_entity.y
 
-                    item_use_results = player.inventory.use(targeting_item, entities=entities, fov_map=fov_map, target_x=target_x, target_y=target_y)
-                    player_results.extend(item_use_results)
+                        item_use_results = player.inventory.use(targeting_item_entity, entities=entities, fov_map=fov_map, target_x=target_x, target_y=target_y)
+                        player_results.extend(item_use_results)
+                        prelim_list.clear()
+                        targeted_entity = None
+                        target_save_color = None
+                    else:
+                        player_results.append({"targeting_canceled": True})
+                        targeted_entity = None
+                        target_save_color = None
+                        prelim_list.clear()
 
             if action.get('exit'):
                 if game_state in (GameStates.SHOW_INVENTORY, GameStates.DROP_INVENTORY):
@@ -181,7 +201,7 @@ def main():
                     player_results.append({"targeting_canceled": True})
                     targeted_entity = None
                     target_save_color = None
-                    cycle_entity_list.clear()
+                    prelim_list.clear()
                 else:
                     return True
                 root_console.clear(fg=(0, 127, 0))
@@ -217,10 +237,10 @@ def main():
                 if targeting:
                     previous_game_state = GameStates.PLAYERS_TURN
                     game_state = GameStates.TARGETING
-                    targeting_item = targeting
+                    targeting_item_entity = targeting
 
-                    logger.info(targeting_item.item.targeting_message.text)
-                    message_log.add_message(targeting_item.item.targeting_message)
+                    logger.info(targeting_item_entity.item.targeting_message.text)
+                    message_log.add_message(targeting_item_entity.item.targeting_message)
                 if targeting_canceled:
                     game_state = previous_game_state
 

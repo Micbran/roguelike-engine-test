@@ -97,7 +97,7 @@ class GameMap:
             new_entity_y = randint(room.y1 + 1, room.y2 - 1)
 
             if not any([entity for entity in entities if entity.x == new_entity_x and entity.y == new_entity_y]):
-                if randint(0, 100) > 80:
+                if randint(0, 100) < 80:
                     orc_combat = Combat(vigor=10, agility=0, brawn=6)
                     ai_component = BasicMonster()
                     monster = Entity(new_entity_x, new_entity_y, 'o', tcod.desaturated_green, "Orc", blocks=True, combat=orc_combat, ai=ai_component, render_order=RenderOrder.ACTOR)
@@ -119,11 +119,11 @@ class GameMap:
                     item_component = Item(use_function=heal, amount=4)
                     new_item = Entity(new_item_x, new_item_y, "!", tcod.violet, "Healing Potion", item=item_component, render_order=RenderOrder.ITEM)
                 elif item_chance < 80:
-                    item_component = Item(use_function=cast_fireball, targeting=True, targeting_message=fireball_target_message, damage=12, radius=3)
+                    item_component = Item(use_function=cast_fireball, targeting=True, targeting_message=fireball_target_message, damage=12, radius=3, max_range=7)
                     new_item = Entity(new_item_x, new_item_y, "?", tcod.red, "Fireball Scroll", render_order=RenderOrder.ITEM, item=item_component)
                 elif item_chance < 90:
-                    item_component = Item(use_function=cast_confuse, tageting=True, targeting_message=confuse_target_message)
-                    item = Entity(new_item_x, new_item_y, "?", tcod.light_pink, "Confusion Scroll", render_order=RenderOrder.ITEM, item=item_component)
+                    item_component = Item(use_function=cast_confuse, targeting=True, targeting_message=confuse_target_message, max_range=5)
+                    new_item = Entity(new_item_x, new_item_y, "?", tcod.light_pink, "Confusion Scroll", render_order=RenderOrder.ITEM, item=item_component)
                 else:
                     item_component = Item(use_function=cast_lightning, damage=20, max_range=5)
                     new_item = Entity(new_item_x, new_item_y, "?", tcod.darker_cyan, "Lightning Scroll", render_order=RenderOrder.ITEM, item=item_component)

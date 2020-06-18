@@ -60,13 +60,13 @@ def cast_fireball(*args, **kwargs):
     results = []
 
     if not tcod.map_is_in_fov(fov_map, target_x, target_y):
-        results.append({'consumed': False, 'message': Message("You cannot target a file outside your field of view.", tcod.yellow)})
+        results.append({'consumed': False, 'message': Message("You cannot target a tile outside your field of view.", tcod.yellow)})
         return results
 
     results.append({'consumed': True, 'message': Message('A fireball explodes!')})
 
     for entity in entities:
-        if entity.distance(target_x, target_y) <= radius and entity.fighter:
+        if entity.distance(target_x, target_y) <= radius and entity.combat:
             results.append({'message': Message("{0} is burned and takes {1} damage!".format(entity.name, damage), tcod.orange)})
             results.extend(entity.combat.take_damage(damage))
 
@@ -82,7 +82,7 @@ def cast_confuse(*args, **kwargs):
     results = []
 
     if not tcod.map_is_in_fov(fov_map, target_x, target_y):
-        results.append({'consumed': False, 'message': Message("You cannot target a file outside your field of view.", tcod.yellow)})
+        results.append({'consumed': False, 'message': Message("You cannot target a tile outside your field of view.", tcod.yellow)})
         return results
 
     for entity in entities:
