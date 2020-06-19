@@ -14,6 +14,10 @@ def handle_event(game_event, game_state):
         return handle_keypress_dead(game_event)
     elif game_event.type == "KEYDOWN" and game_state == GameStates.TARGETING:
         return handle_keypress_targeting(game_event)
+    elif game_event.type == "KEYDOWN" and game_state == GameStates.LEVEL_UP:
+        return handle_keypress_level_up_menu(game_event)
+    elif game_event.type == "KEYDOWN" and game_state == GameStates.CHARACTER_SCREEN:
+        return handle_keypress_character_sheet(game_event)
 
     return {}
 
@@ -36,13 +40,17 @@ def handle_keypress_player_turn(game_event):
     elif game_event.sym == tcod.event.K_KP_9:
         return {'move': (1, -1)}
     elif game_event.sym == tcod.event.K_KP_5:
-        return {'move': (0, 0)}
+        return {'wait': True}
     elif game_event.sym == tcod.event.K_g:
         return {'pickup': True}
     elif game_event.sym == tcod.event.K_i:
         return {'show_inventory': True}
     elif game_event.sym == tcod.event.K_d:
         return {'drop_inventory': True}
+    elif game_event.sym == tcod.event.K_KP_GREATER or game_event.sym == tcod.event.K_KP_ENTER or game_event.sym == tcod.event.K_RETURN or game_event.sym == tcod.event.K_GREATER:
+        return {'take_stairs': True}
+    elif game_event.sym == tcod.event.K_c:
+        return {'show_character_sheet': True}
 
     if game_event.sym == tcod.event.K_ESCAPE:
         return {'exit': True}
@@ -91,6 +99,24 @@ def handle_event_main_menu(key):
     elif key_char == 'b':
         return {'load_saved_game': True}
     elif key_char == 'c' or key.vk == tcod.KEY_ESCAPE:
+        return {'exit': True}
+
+    return {}
+
+
+def handle_keypress_level_up_menu(game_event):
+    if game_event.sym == tcod.event.K_a:
+        return {'level_up': 'hp'}
+    elif game_event.sym == tcod.event.K_b:
+        return {'level_up': 'str'}
+    elif game_event.sym == tcod.event.K_c:
+        return {'level_up': 'def'}
+
+    return {}
+
+
+def handle_keypress_character_sheet(game_event):
+    if game_event.sym == tcod.event.K_ESCAPE:
         return {'exit': True}
 
     return {}

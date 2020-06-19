@@ -8,7 +8,7 @@ from loader_functions.init_new_game import get_constants, get_game_variables
 from loader_functions.data_loaders import save_game, load_game
 from event_handler import handle_event, handle_event_main_menu
 from entity.entity import get_blocking_entities_at_location
-from render_help import render_all, clear_all, RenderOrder
+from render_help import render_all, clear_all
 from fov_help import init_fov, recompute_fov
 from game_state import GameStates
 from death_functions import kill_player, kill_monster
@@ -123,6 +123,21 @@ def play_game(player, entities, game_map, message_log, game_state, root_console,
                         fov_recompute = True
                     game_state = GameStates.ENEMY_TURN
 
+            if action.get('take_stairs') and GameStates.PLAYERS_TURN:
+                for entity in entities:
+                    if entity.stairs and entity.x == player.x and entity.y == player.y:
+                        entities = game_map.next_floor(player, message_log, constants)
+                        fov_map = init_fov(game_map)
+                        fov_recompute = True
+                        root_console.clear(fg=(255, 255, 63))
+
+                        break
+                else:
+                    message_log.add_message(Message('There are no stairs here.', tcod.yellow))
+
+            if action.get('wait') and game_state is GameStates.PLAYERS_TURN:
+                game_state = GameStates.ENEMY_TURN
+
             if action.get('pickup') and game_state is GameStates.PLAYERS_TURN:
                 for entity in entities:
                     if entity.item and entity.x == player.x and entity.y == player.y:
@@ -206,8 +221,24 @@ def play_game(player, entities, game_map, message_log, game_state, root_console,
                         target_save_color = None
                         prelim_list.clear()
 
+            if action.get('level_up'):
+                level_up_choice = action.get('level_up')
+                if level_up_choice == 'hp':
+                    player.combat.max_hp += 20
+                    player.combat.hp += 20
+                elif level_up_choice == 'str':
+                    player.combat.brawn += 1
+                elif level_up_choice == 'def':
+                    player.combat.agility += 1
+
+                game_state = previous_game_state
+
+            if action.get('show_character_sheet'):
+                previous_game_state = game_state
+                game_state = GameStates.CHARACTER_SCREEN
+
             if action.get('exit'):
-                if game_state in (GameStates.SHOW_INVENTORY, GameStates.DROP_INVENTORY):
+                if game_state in (GameStates.SHOW_INVENTORY, GameStates.DROP_INVENTORY, GameStates.CHARACTER_SCREEN):
                     game_state = previous_game_state
                 elif game_state == GameStates.TARGETING:
                     player_results.append({"targeting_canceled": True})
@@ -232,6 +263,7 @@ def play_game(player, entities, game_map, message_log, game_state, root_console,
                 item_dropped = result.get('item_dropped')
                 targeting = result.get('targeting')
                 targeting_canceled = result.get('targeting_canceled')
+                xp = result.get('xp')
 
                 if message:
                     logger.info(message.text)
@@ -264,6 +296,14 @@ def play_game(player, entities, game_map, message_log, game_state, root_console,
                 if item_dropped:
                     entities.append(item_dropped)
                     game_state = GameStates.ENEMY_TURN
+                if xp:
+                    leveled_up = player.level.add_xp(xp)
+                    message_log.add_message(Message('You gain {0} experience points!'.format(xp)))
+
+                    if leveled_up:
+                        message_log.add_message(Message('You level up! You have reached level {0}.'.format(player.level.level), tcod.yellow))
+                        previous_game_state = game_state
+                        game_state = GameStates.LEVEL_UP
 
             root_console.clear(fg=(0, 127, 0))
             render_all(root_console, hp_message_panel, entities, player, game_map, fov_map, True,

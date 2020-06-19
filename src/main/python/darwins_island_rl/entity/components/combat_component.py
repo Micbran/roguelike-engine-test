@@ -5,11 +5,12 @@ from game_messages import Message
 
 
 class Combat:
-    def __init__(self, vigor, agility, brawn):
-        self.max_hp = vigor  # TODO some forumula
+    def __init__(self, vigor, agility, brawn, xp=0):
+        self.max_hp = vigor
         self.hp = vigor
         self.agility = agility
         self.brawn = brawn
+        self.xp = xp
         self.owner = None
 
     def take_damage(self, damage):
@@ -18,7 +19,7 @@ class Combat:
         self.hp -= damage
 
         if self.hp <= 0:
-            results.append({'dead': self.owner})
+            results.append({'dead': self.owner, 'xp': self.xp})
 
         return results
 

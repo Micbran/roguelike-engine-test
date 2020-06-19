@@ -1,14 +1,15 @@
-from enum import Enum
+from enum import Enum, auto
 
 import tcod
 from game_state import GameStates
-from menus import inventory_menu
+from menus import inventory_menu, level_up_menu, character_sheet
 
 
 class RenderOrder(Enum):
-    CORPSE = 1
-    ITEM = 2
-    ACTOR = 3
+    STAIRS = auto()
+    CORPSE = auto()
+    ITEM = auto()
+    ACTOR = auto()
 
 
 def render_bar(panel, x, y, total_width, name, value, max_value, bar_color, back_color):
@@ -47,7 +48,7 @@ def render_all(console, panel, entities_list, player, game_map, fov_map, fov_rec
     # Render Entities
     entities_list_render_order = sorted(entities_list, key=lambda val: val.render_order.value)
     for entity in entities_list_render_order:
-        draw_entity(console, entity, fov_map)
+        draw_entity(console, entity, fov_map, game_map)
 
     console.blit(console, 0, screen_width, screen_height, 0, 0, 0)
     panel.default_bg = tcod.black
@@ -59,9 +60,12 @@ def render_all(console, panel, entities_list, player, game_map, fov_map, fov_rec
         y += 1
 
     render_bar(panel, 1, 1, bar_width, "HP", player.combat.hp, player.combat.max_hp, tcod.light_red, tcod.darker_red)
+    tcod.console_print_ex(panel, 1, 3, tcod.BKGND_NONE, tcod.LEFT, 'Dungeon Level: {0}'.format(game_map.dungeon_level))
 
     # panel.blit(panel, 0, 0, screen_width, panel_height, 0, 0) # Work with blit somehow?
     tcod.console_blit(panel, 0, 0, screen_width, panel_height, console, 0, panel_y)
+
+    inventory_title = "No handler."
 
     if game_state in (GameStates.SHOW_INVENTORY, GameStates.DROP_INVENTORY):
         if game_state == GameStates.SHOW_INVENTORY:
@@ -69,11 +73,17 @@ def render_all(console, panel, entities_list, player, game_map, fov_map, fov_rec
         if game_state == GameStates.DROP_INVENTORY:
             inventory_title = "Press the key next to an item to drop it or press Esc to exit.\n"
 
-        inventory_menu(console, "Press the key next to an item to use it or press Esc to exit.\n", player.inventory, 50, screen_width, screen_height)
+        inventory_menu(console, inventory_title, player.inventory, 50, screen_width, screen_height)
+
+    elif game_state == GameStates.LEVEL_UP:
+        level_up_menu(console, 'Level up! Choose a stat to raise:', player, 40, screen_width, screen_height)
+
+    elif game_state == GameStates.CHARACTER_SCREEN:
+        character_sheet(player, 30, 10, screen_width, screen_height)
 
 
-def draw_entity(console, entity, fov_map):
-    if tcod.map_is_in_fov(fov_map, entity.x, entity.y):
+def draw_entity(console, entity, fov_map, game_map):
+    if tcod.map_is_in_fov(fov_map, entity.x, entity.y) or (entity.stairs and game_map.tiles[entity.x][entity.y].explored):
         console.default_fg = entity.color
         tcod.console_put_char(console, entity.x, entity.y, entity.char)
 

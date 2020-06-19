@@ -3,6 +3,7 @@ import os.path
 
 from entity.components.combat_component import Combat
 from entity.components.inventory import Inventory
+from entity.components.level import Level
 from entity.entity import Entity
 from map_objects.game_map import GameMap
 from game_messages import MessageLog
@@ -80,8 +81,9 @@ def get_constants():
 def get_game_variables(constants):
     combat_component = Combat(vigor=30, agility=5, brawn=5)
     inventory_component = Inventory(26)
+    level_component = Level()
     player = Entity(int(constants['SCREEN_WIDTH'] / 2), int(constants['SCREEN_HEIGHT'] / 2), '@', tcod.white, "Player",
-                    blocks=True, combat=combat_component, inventory=inventory_component, render_order=RenderOrder.ACTOR)
+                    blocks=True, combat=combat_component, inventory=inventory_component, render_order=RenderOrder.ACTOR, level=level_component)
     entities = [player]
 
     game_map = GameMap(constants['MAP_WIDTH'], constants['MAP_HEIGHT'])
