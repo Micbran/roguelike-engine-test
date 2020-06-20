@@ -10,6 +10,7 @@ from entity.components.stairs import Stairs
 from render_help import RenderOrder
 from entity.components.item_functions import heal, cast_lightning, cast_fireball, cast_confuse
 from game_messages import Message
+from random_utils import random_choice_from_dict, from_dungeon_level
 
 import tcod
 
@@ -32,7 +33,7 @@ class GameMap:
     def is_blocked(self, x, y):
         return self.tiles[x][y].move_block
 
-    def make_map(self, max_rooms, room_min_size, room_max_size, map_width, map_height, player, entities, max_ent_per_room, max_items_per_room):
+    def make_map(self, max_rooms, room_min_size, room_max_size, map_width, map_height, player, entities):
         rooms = []
         num_rooms = 0  # Potential candidate for refactoring (just use rooms len)
 
@@ -72,7 +73,7 @@ class GameMap:
                         self.create_vert_tunnel(prev_y, center_y, prev_x)
                         self.create_hori_tunnel(prev_x, center_x, center_y)
 
-                self.place_entities(rand_room, entities, max_ent_per_room, max_items_per_room)
+                self.place_entities(rand_room, entities)
 
                 rooms.append(rand_room)
                 num_rooms += 1
@@ -96,44 +97,53 @@ class GameMap:
             self.tiles[x][y].move_block = False
             self.tiles[x][y].sight_block = False
 
-    def place_entities(self, room, entities, max_ent_per_room, max_items_per_room):
-        number_of_entities = randint(0, max_ent_per_room)
-        number_of_items = randint(0, max_items_per_room)
+    def place_entities(self, room, entities):
+        number_of_entities = from_dungeon_level([[2, 1], [3, 4], [5, 6]], self.dungeon_level)
+        number_of_items = from_dungeon_level([[1, 1], [2, 4]], self.dungeon_level)
+
+        monster_chances = {'orc': 80,
+                           'troll': from_dungeon_level([[15, 3], [30, 5], [60, 7]], self.dungeon_level)}
+
+        item_chances = {'healing_potion': 35,
+                        'lightning_scroll': from_dungeon_level([[25, 4]], self.dungeon_level),
+                        'fireball_scroll': from_dungeon_level([[25, 6]], self.dungeon_level),
+                        'confusion_scroll': from_dungeon_level([[10, 2]], self.dungeon_level)}
 
         for new_entity in range(number_of_entities):
             new_entity_x = randint(room.x1 + 1, room.x2 - 1)
             new_entity_y = randint(room.y1 + 1, room.y2 - 1)
 
             if not any([entity for entity in entities if entity.x == new_entity_x and entity.y == new_entity_y]):
-                if randint(0, 100) < 80:
-                    orc_combat = Combat(vigor=10, agility=0, brawn=6, xp=35)
+                monster_choice = random_choice_from_dict(monster_chances)
+                if monster_choice == 'orc':
+                    orc_combat = Combat(vigor=20, agility=0, brawn=4, xp=35)
                     ai_component = BasicMonster()
-                    monster = Entity(new_entity_x, new_entity_y, 'o', tcod.desaturated_green, "Orc", blocks=True, combat=orc_combat, ai=ai_component, render_order=RenderOrder.ACTOR)
-                else:
-                    troll_combat = Combat(vigor=16, agility=1, brawn=7, xp=100)
+                    new_entity = Entity(new_entity_x, new_entity_y, 'o', tcod.desaturated_green, "Orc", blocks=True, combat=orc_combat, ai=ai_component, render_order=RenderOrder.ACTOR)
+                elif monster_choice == 'troll':
+                    troll_combat = Combat(vigor=30, agility=2, brawn=8, xp=100)
                     ai_component = BasicMonster()
-                    monster = Entity(new_entity_x, new_entity_y, 'T', tcod.darker_green, "Troll", blocks=True, combat=troll_combat, ai=ai_component, render_order=RenderOrder.ACTOR)
+                    new_entity = Entity(new_entity_x, new_entity_y, 'T', tcod.darker_green, "Troll", blocks=True, combat=troll_combat, ai=ai_component, render_order=RenderOrder.ACTOR)
 
-                entities.append(monster)
+                entities.append(new_entity)
 
         for new_item in range(number_of_items):
             new_item_x = randint(room.x1 + 1, room.x2 - 1)
             new_item_y = randint(room.y1 + 1, room.y2 - 1)
 
             if not any([entity for entity in entities if entity.x == new_item_x and entity.y == new_item_y]):
-                item_chance = randint(0, 100)
+                item_choice = random_choice_from_dict(item_chances)
 
-                if item_chance < 70:
-                    item_component = Item(use_function=heal, amount=4)
+                if item_choice == 'healing_potion':
+                    item_component = Item(use_function=heal, amount=40)
                     new_item = Entity(new_item_x, new_item_y, "!", tcod.violet, "Healing Potion", item=item_component, render_order=RenderOrder.ITEM)
-                elif item_chance < 80:
-                    item_component = Item(use_function=cast_fireball, targeting=True, targeting_message=fireball_target_message, damage=12, radius=3, max_range=7)
+                elif item_choice == 'fireball_scroll':
+                    item_component = Item(use_function=cast_fireball, targeting=True, targeting_message=fireball_target_message, damage=25, radius=3, max_range=7)
                     new_item = Entity(new_item_x, new_item_y, "?", tcod.red, "Fireball Scroll", render_order=RenderOrder.ITEM, item=item_component)
-                elif item_chance < 90:
+                elif item_choice == 'confusion_scroll':
                     item_component = Item(use_function=cast_confuse, targeting=True, targeting_message=confuse_target_message, max_range=5)
                     new_item = Entity(new_item_x, new_item_y, "?", tcod.light_pink, "Confusion Scroll", render_order=RenderOrder.ITEM, item=item_component)
-                else:
-                    item_component = Item(use_function=cast_lightning, damage=20, max_range=5)
+                elif item_choice == 'lightning_scroll':
+                    item_component = Item(use_function=cast_lightning, damage=40, max_range=5)
                     new_item = Entity(new_item_x, new_item_y, "?", tcod.darker_cyan, "Lightning Scroll", render_order=RenderOrder.ITEM, item=item_component)
 
                 entities.append(new_item)
@@ -143,7 +153,7 @@ class GameMap:
         entities = [player]
 
         self.tiles = self.init_tiles()
-        self.make_map(constants['MAX_ROOMS'], constants['ROOM_MIN_SIZE'], constants['ROOM_MAX_SIZE'], constants['MAP_WIDTH'], constants['MAP_HEIGHT'], player, entities, constants['MAX_ENTITIES_PER_ROOM'], constants['MAX_ITEMS_PER_ROOM'])
+        self.make_map(constants['MAX_ROOMS'], constants['ROOM_MIN_SIZE'], constants['ROOM_MAX_SIZE'], constants['MAP_WIDTH'], constants['MAP_HEIGHT'], player, entities)
 
         player.combat.heal(player.combat.max_hp // 2)
 

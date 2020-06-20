@@ -79,7 +79,7 @@ def get_constants():
 
 
 def get_game_variables(constants):
-    combat_component = Combat(vigor=30, agility=5, brawn=5)
+    combat_component = Combat(vigor=100, agility=1, brawn=4)
     inventory_component = Inventory(26)
     level_component = Level()
     player = Entity(int(constants['SCREEN_WIDTH'] / 2), int(constants['SCREEN_HEIGHT'] / 2), '@', tcod.white, "Player",
@@ -87,7 +87,7 @@ def get_game_variables(constants):
     entities = [player]
 
     game_map = GameMap(constants['MAP_WIDTH'], constants['MAP_HEIGHT'])
-    game_map.make_map(constants['MAX_ROOMS'], constants['ROOM_MIN_SIZE'], constants['ROOM_MAX_SIZE'], constants['MAP_WIDTH'], constants['MAP_HEIGHT'], player, entities, constants['MAX_ENTITIES_PER_ROOM'], constants['MAX_ITEMS_PER_ROOM'])
+    game_map.make_map(constants['MAX_ROOMS'], constants['ROOM_MIN_SIZE'], constants['ROOM_MAX_SIZE'], constants['MAP_WIDTH'], constants['MAP_HEIGHT'], player, entities)
 
     message_log = MessageLog(constants['MESSAGE_X_LOC'], constants['MESSAGE_WIDTH'], constants['MESSAGE_HEIGHT'])
     game_state = GameStates.PLAYERS_TURN
