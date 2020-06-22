@@ -5,10 +5,14 @@ from entity.components.combat_component import Combat
 from entity.components.inventory import Inventory
 from entity.components.level import Level
 from entity.entity import Entity
+from entity.components.equipment import Equipment
+from entity.components.equippable import Equippable
 from map_objects.game_map import GameMap
 from game_messages import MessageLog
 from game_state import GameStates
 from render_help import RenderOrder
+
+from equipment_slots import EquipmentSlots
 
 
 def get_constants():
@@ -79,12 +83,17 @@ def get_constants():
 
 
 def get_game_variables(constants):
-    combat_component = Combat(vigor=100, agility=1, brawn=4)
+    combat_component = Combat(vigor=100, agility=1, brawn=2)
     inventory_component = Inventory(26)
     level_component = Level()
+    equipment_component = Equipment()
+    equippable_component = Equippable(EquipmentSlots.MAIN_HAND, brawn_bonus=2)
+    dagger = Entity(0, 0, '-', tcod.sky, 'Dagger', equippable=equippable_component)
     player = Entity(int(constants['SCREEN_WIDTH'] / 2), int(constants['SCREEN_HEIGHT'] / 2), '@', tcod.white, "Player",
-                    blocks=True, combat=combat_component, inventory=inventory_component, render_order=RenderOrder.ACTOR, level=level_component)
+                    blocks=True, combat=combat_component, inventory=inventory_component, render_order=RenderOrder.ACTOR, level=level_component, equipment=equipment_component)
     entities = [player]
+    player.inventory.add_item(dagger)
+    player.equipment.toggle_equip(dagger)
 
     game_map = GameMap(constants['MAP_WIDTH'], constants['MAP_HEIGHT'])
     game_map.make_map(constants['MAX_ROOMS'], constants['ROOM_MIN_SIZE'], constants['ROOM_MAX_SIZE'], constants['MAP_WIDTH'], constants['MAP_HEIGHT'], player, entities)

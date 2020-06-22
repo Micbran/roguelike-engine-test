@@ -155,9 +155,7 @@ def play_game(player, entities, game_map, message_log, game_state, root_console,
                 previous_game_state = game_state
                 game_state = GameStates.DROP_INVENTORY
 
-            if action.get(
-                    'inventory_index') is not None and previous_game_state != GameStates.PLAYER_DEAD and action.get(
-                    'inventory_index') < len(player.inventory.items):
+            if action.get('inventory_index') is not None and previous_game_state != GameStates.PLAYER_DEAD and action.get('inventory_index') < len(player.inventory.items):
                 item = player.inventory.items[action.get('inventory_index')]
                 if game_state == GameStates.SHOW_INVENTORY:
                     player_results.extend(player.inventory.use(item, entities=entities, fov_map=fov_map))
@@ -224,12 +222,12 @@ def play_game(player, entities, game_map, message_log, game_state, root_console,
             if action.get('level_up'):
                 level_up_choice = action.get('level_up')
                 if level_up_choice == 'hp':
-                    player.combat.max_hp += 20
+                    player.combat.base_max_hp += 20
                     player.combat.hp += 20
                 elif level_up_choice == 'str':
-                    player.combat.brawn += 1
+                    player.combat.base_brawn += 1
                 elif level_up_choice == 'def':
-                    player.combat.agility += 1
+                    player.combat.base_agility += 1
 
                 game_state = previous_game_state
 
@@ -261,6 +259,7 @@ def play_game(player, entities, game_map, message_log, game_state, root_console,
                 item_added = result.get('item_added')
                 item_consumed = result.get('consumed')
                 item_dropped = result.get('item_dropped')
+                equip = result.get('equip')
                 targeting = result.get('targeting')
                 targeting_canceled = result.get('targeting_canceled')
                 xp = result.get('xp')
@@ -295,6 +294,19 @@ def play_game(player, entities, game_map, message_log, game_state, root_console,
                     message_log.add_message(Message("Targeting canceled", tcod.yellow))
                 if item_dropped:
                     entities.append(item_dropped)
+                    game_state = GameStates.ENEMY_TURN
+                if equip:
+                    equip_results = player.equipment.toggle_equip(equip)
+
+                    for equip_result in equip_results:
+                        equipped = equip_result.get('equipped')
+                        dequipped = equip_result.get('dequipped')
+
+                        if equipped:
+                            message_log.add_message(Message('You equipped the {0}.'.format(equipped.name)))
+                        if dequipped:
+                            message_log.add_message(Message('You dequipped the {0}.'.format(dequipped.name)))
+
                     game_state = GameStates.ENEMY_TURN
                 if xp:
                     leveled_up = player.level.add_xp(xp)

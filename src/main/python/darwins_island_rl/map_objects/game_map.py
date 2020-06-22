@@ -7,6 +7,8 @@ from entity.components.combat_component import Combat
 from entity.components.ai import BasicMonster
 from entity.components.item import Item
 from entity.components.stairs import Stairs
+from entity.components.equipment import EquipmentSlots
+from entity.components.equippable import Equippable
 from render_help import RenderOrder
 from entity.components.item_functions import heal, cast_lightning, cast_fireball, cast_confuse
 from game_messages import Message
@@ -107,7 +109,9 @@ class GameMap:
         item_chances = {'healing_potion': 35,
                         'lightning_scroll': from_dungeon_level([[25, 4]], self.dungeon_level),
                         'fireball_scroll': from_dungeon_level([[25, 6]], self.dungeon_level),
-                        'confusion_scroll': from_dungeon_level([[10, 2]], self.dungeon_level)}
+                        'confusion_scroll': from_dungeon_level([[10, 2]], self.dungeon_level),
+                        'sword': from_dungeon_level([[5, 4]], self.dungeon_level),
+                        'shield': from_dungeon_level([[15, 8]], self.dungeon_level)}
 
         for new_entity in range(number_of_entities):
             new_entity_x = randint(room.x1 + 1, room.x2 - 1)
@@ -145,6 +149,12 @@ class GameMap:
                 elif item_choice == 'lightning_scroll':
                     item_component = Item(use_function=cast_lightning, damage=40, max_range=5)
                     new_item = Entity(new_item_x, new_item_y, "?", tcod.darker_cyan, "Lightning Scroll", render_order=RenderOrder.ITEM, item=item_component)
+                elif item_choice == 'sword':
+                    equippable_component = Equippable(EquipmentSlots.MAIN_HAND, brawn_bonus=3)
+                    new_item = Entity(new_item_x, new_item_y, "|", tcod.sky, 'Sword', equippable=equippable_component)
+                elif item_choice == 'shield':
+                    equippable_component = Equippable(EquipmentSlots.OFF_HAND, agility_bonus=1)
+                    new_item = Entity(new_item_x, new_item_y, "[", tcod.darker_orange, 'Shield', equippable=equippable_component)
 
                 entities.append(new_item)
 

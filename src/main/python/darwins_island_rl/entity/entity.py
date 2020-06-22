@@ -4,12 +4,13 @@ import tcod
 
 from render_help import RenderOrder
 
+from entity.components.item import Item
 
 class Entity:
     """
     Base object to represent things on screen.
     """
-    def __init__(self, x, y, char, color, name, blocks=False, combat=None, ai=None, item=None, inventory=None, render_order=RenderOrder.CORPSE, stairs=None, level=None):
+    def __init__(self, x, y, char, color, name, blocks=False, combat=None, ai=None, item=None, inventory=None, render_order=RenderOrder.CORPSE, stairs=None, level=None, equipment=None, equippable=None):
         self.x = x
         self.y = y
         self.char = char
@@ -23,6 +24,8 @@ class Entity:
         self.render_order = render_order
         self.stairs = stairs
         self.level = level
+        self.equipment = equipment
+        self.equippable = equippable
 
         if self.combat:
             self.combat.owner = self
@@ -41,6 +44,17 @@ class Entity:
 
         if self.level:
             self.level.owner = self
+
+        if self.equipment:
+            self.equipment.owner = self
+
+        if self.equippable:
+            self.equippable.owner = self
+
+            if not self.item:
+                item = Item()
+                self.item = item
+                self.item.owner = self
 
     def move(self, dx, dy):
         self.x += dx

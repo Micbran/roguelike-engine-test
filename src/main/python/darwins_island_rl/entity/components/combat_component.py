@@ -6,12 +6,39 @@ from game_messages import Message
 
 class Combat:
     def __init__(self, vigor, agility, brawn, xp=0):
-        self.max_hp = vigor
+        self.base_max_hp = vigor
         self.hp = vigor
-        self.agility = agility
-        self.brawn = brawn
+        self.base_agility = agility
+        self.base_brawn = brawn
         self.xp = xp
         self.owner = None
+
+    @property
+    def max_hp(self):
+        if self.owner and self.owner.equipment:
+            bonus = self.owner.equipment.hp_bonus
+        else:
+            bonus = 0
+
+        return self.base_max_hp + bonus
+
+    @property
+    def brawn(self):
+        if self.owner and self.owner.equipment:
+            bonus = self.owner.equipment.brawn_bonus
+        else:
+            bonus = 0
+
+        return self.base_brawn + bonus
+
+    @property
+    def agility(self):
+        if self.owner and self.owner.equipment:
+            bonus = self.owner.equipment.agility_bonus
+        else:
+            bonus = 0
+
+        return self.base_agility + bonus
 
     def take_damage(self, damage):
         results = []
